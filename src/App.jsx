@@ -15,7 +15,8 @@ function colorAcentoAleatorio() {
 
 export default function App() {
   const [frases, setFrases] = useState([]);
-  const [indice, setIndice] = useState(0);
+  const [indiceActual, setIndiceActual] = useState(null);
+  const [historial, setHistorial] = useState([]);
   const [accentColor, setAccentColor] = useState(colorAcentoAleatorio());
 
   useEffect(() => {
@@ -23,21 +24,36 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         setFrases(data);
-        setIndice(0);
+        const randomIndex = Math.floor(Math.random() * data.length);
+        setIndiceActual(randomIndex);
         setAccentColor(colorAcentoAleatorio());
       })
       .catch(err => console.error('Error cargando JSON:', err));
   }, []);
 
-  const cambiarFrase = (nuevoIndice) => {
+  const siguienteFrase = () => {
     if (frases.length === 0) return;
-    const index = (nuevoIndice + frases.length) % frases.length; // circular
-    setIndice(index);
+
+    let randomIndex;
+    do {
+      randomIndex = Math.floor(Math.random() * frases.length);
+    } while (randomIndex === indiceActual);
+
+    setHistorial([...historial, indiceActual]); // guardo la actual antes de cambiar
+    setIndiceActual(randomIndex);
+    setAccentColor(colorAcentoAleatorio());
+  };
+
+  const anteriorFrase = () => {
+    if (historial.length === 0) return;
+    const ultimo = historial[historial.length - 1];
+    setHistorial(historial.slice(0, -1)); // quito el último
+    setIndiceActual(ultimo);
     setAccentColor(colorAcentoAleatorio());
   };
 
   const compartirFrase = () => {
-    const frase = frases[indice];
+    const frase = frases[indiceActual];
     if (!frase) return;
 
     if (navigator.share) {
@@ -57,15 +73,15 @@ export default function App() {
     <div className="app">
       <div className="container">
         <Header />
-        {frases.length > 0 ? (
-          <FraseCard frase={frases[indice]} accentColor={accentColor} />
+        {indiceActual !== null && frases.length > 0 ? (
+          <FraseCard frase={frases[indiceActual]} accentColor={accentColor} />
         ) : (
           <p>Cargando frases...</p>
         )}
 
         <div className="botones">
-          <Boton texto="Anterior" onClick={() => cambiarFrase(indice - 1)} />
-          <Boton texto="Siguiente" onClick={() => cambiarFrase(indice + 1)} />
+          <Boton texto="Anterior" onClick={anteriorFrase} />
+          <Boton texto="Siguiente" onClick={siguienteFrase} />
           <Boton texto="Compartir" onClick={compartirFrase} />
         </div>
       </div>
