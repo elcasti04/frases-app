@@ -15,7 +15,7 @@ function colorAcentoAleatorio() {
 
 export default function App() {
   const [frases, setFrases] = useState([]);
-  const [fraseActual, setFraseActual] = useState(null);
+  const [indice, setIndice] = useState(0);
   const [accentColor, setAccentColor] = useState(colorAcentoAleatorio());
 
   useEffect(() => {
@@ -23,34 +23,51 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         setFrases(data);
-        const random = data[Math.floor(Math.random() * data.length)];
-        setFraseActual(random);
+        setIndice(0);
         setAccentColor(colorAcentoAleatorio());
       })
       .catch(err => console.error('Error cargando JSON:', err));
   }, []);
 
-  const cambiarFrase = () => {
+  const cambiarFrase = (nuevoIndice) => {
     if (frases.length === 0) return;
-    let nueva;
-    do {
-      nueva = frases[Math.floor(Math.random() * frases.length)];
-    } while (nueva.texto === fraseActual?.texto);
-
-    setFraseActual(nueva);
+    const index = (nuevoIndice + frases.length) % frases.length; // circular
+    setIndice(index);
     setAccentColor(colorAcentoAleatorio());
+  };
+
+  const compartirFrase = () => {
+    const frase = frases[indice];
+    if (!frase) return;
+
+    if (navigator.share) {
+      navigator.share({
+        title: "Frase inspiradora",
+        text: `"${frase.texto}" - ${frase.autor}`,
+        url: window.location.href
+      }).catch(err => console.error("Error al compartir:", err));
+    } else {
+      navigator.clipboard.writeText(`"${frase.texto}" - ${frase.autor}`)
+        .then(() => alert("Frase copiada al portapapeles 📋"))
+        .catch(err => console.error("No se pudo copiar:", err));
+    }
   };
 
   return (
     <div className="app">
       <div className="container">
         <Header />
-        {fraseActual ? (
-          <FraseCard frase={fraseActual} accentColor={accentColor} />
+        {frases.length > 0 ? (
+          <FraseCard frase={frases[indice]} accentColor={accentColor} />
         ) : (
           <p>Cargando frases...</p>
         )}
-        <Boton texto="Nueva frase" onClick={cambiarFrase} />
+
+        <div className="botones">
+          <Boton texto="Anterior" onClick={() => cambiarFrase(indice - 1)} />
+          <Boton texto="Siguiente" onClick={() => cambiarFrase(indice + 1)} />
+          <Boton texto="Compartir" onClick={compartirFrase} />
+        </div>
       </div>
     </div>
   );
